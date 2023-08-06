@@ -5,13 +5,6 @@ const BadRequestError = require('../errors/BadRequestError');
 const ConflictError = require('../errors/ConflictError');
 const NotFoundError = require('../errors/NotFoundError');
 const UnauthorizedError = require('../errors/UnauthorizedError');
-const {
-  createUserValidation,
-  loginValidation,
-  updateUserProfileValidation,
-  updateUserAvatarValidation,
-  getUserValidation,
-} = require('../middlewares/validation');
 
 const getCurrentUser = (req, res, next) => {
   const userId = req.user._id;
@@ -19,13 +12,11 @@ const getCurrentUser = (req, res, next) => {
   User.findById(userId)
     .then((user) => {
       if (!user) {
-        throw new NotFoundError('Пользователь не найден');
+        return next(new NotFoundError('Пользователь не найден'));
       }
       res.send(user);
     })
-    .catch((err) => {
-      next(err);
-    });
+    .catch(next);
 };
 
 const getUsers = (req, res, next) => {
@@ -42,16 +33,15 @@ const getUserById = (req, res, next) => {
   User.findById(userId)
     .then((user) => {
       if (!user) {
-        throw new NotFoundError('Запрашиваемый пользователь не найден');
+        return next(new NotFoundError('Запрашиваемый пользователь не найден'));
       }
       res.send(user);
     })
     .catch((err) => {
       if (err.name === 'CastError') {
-        next(new BadRequestError('Некорректный формат ID пользователя'));
-      } else {
-        next(err);
+        return next(new BadRequestError('Некорректный формат ID пользователя'));
       }
+      return next(err);
     });
 };
 
@@ -80,12 +70,11 @@ const createUser = (req, res, next) => {
     })
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        next(new BadRequestError('Переданы некорректные данные'));
-      } else if (err.name === 'MongoServerError' && err.code === 11000) {
-        next(new ConflictError('Пользователь с таким email уже существует'));
-      } else {
-        next(err);
+        return next(new BadRequestError('Переданы некорректные данные'));
+      } if (err.name === 'MongoServerError' && err.code === 11000) {
+        return next(new ConflictError('Пользователь с таким email уже существует'));
       }
+      return next(err);
     });
 };
 
@@ -100,18 +89,15 @@ const updateProfileUser = (req, res, next) => {
   )
     .then((updatedUser) => {
       if (!updatedUser) {
-        throw new NotFoundError('Пользователь не найден');
+        return next(new NotFoundError('Пользователь не найден'));
       }
       res.send(updatedUser);
     })
     .catch((err) => {
-      if (err.name === 'CastError') {
-        next(new BadRequestError('Некорректный формат ID пользователя'));
-      } else if (err.name === 'ValidationError') {
-        next(new BadRequestError('Переданы некорректные данные'));
-      } else {
-        next(err);
+      if (err.name === 'ValidationError') {
+        return next(new BadRequestError('Переданы некорректные данные'));
       }
+      return next(err);
     });
 };
 
@@ -126,18 +112,15 @@ const updateAvatarUser = (req, res, next) => {
   )
     .then((updatedUser) => {
       if (!updatedUser) {
-        throw new NotFoundError('Пользователь не найден');
+        return next(new NotFoundError('Пользователь не найден'));
       }
       res.send(updatedUser);
     })
     .catch((err) => {
-      if (err.name === 'CastError') {
-        next(new BadRequestError('Некорректный формат ID пользователя'));
-      } else if (err.name === 'ValidationError') {
-        next(new BadRequestError('Переданы некорректные данные'));
-      } else {
-        next(err);
+      if (err.name === 'ValidationError') {
+        return next(new BadRequestError('Переданы некорректные данные'));
       }
+      return next(err);
     });
 };
 
@@ -146,14 +129,12 @@ const login = (req, res, next) => {
 
   return User.findOne({ email })
     .select('+password')
-    // eslint-disable-next-line consistent-return
     .then((user) => {
       if (!user) {
         return next(new UnauthorizedError('Неправильные почта или пароль'));
       }
 
       bcrypt.compare(password, user.password)
-        // eslint-disable-next-line consistent-return
         .then((isMatch) => {
           if (!isMatch) {
             return next(new UnauthorizedError('Неправильные почта или пароль'));
@@ -168,25 +149,24 @@ const login = (req, res, next) => {
           });
 
           res.send({ message: 'Аутентификация прошла успешно' });
-        });
+        })
+        .catch(next);
     })
     .catch(next);
 };
 
 const logout = (req, res) => {
-  try {
-    res.clearCookie('jwt', { httpOnly: true })
-      .send({ exit: 'Вы вышли.' });
-  } catch (err) { throw new Error(err); }
+  res.clearCookie('jwt', { httpOnly: true })
+    .send({ exit: 'Вы вышли.' });
 };
 
 module.exports = {
   getUsers,
-  getUserById: [getUserValidation, getUserById],
-  createUser: [createUserValidation, createUser],
-  updateProfileUser: [updateUserProfileValidation, updateProfileUser],
-  updateAvatarUser: [updateUserAvatarValidation, updateAvatarUser],
-  login: [loginValidation, login],
+  getUserById,
+  createUser,
+  updateProfileUser,
+  updateAvatarUser,
+  login,
   getCurrentUser,
   logout,
 };

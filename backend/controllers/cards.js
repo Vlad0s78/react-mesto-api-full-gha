@@ -2,10 +2,6 @@ const Card = require('../models/card');
 const BadRequestError = require('../errors/BadRequestError');
 const NotFoundError = require('../errors/NotFoundError');
 const ForbiddenError = require('../errors/ForbiddenError');
-const {
-  createCardValidation,
-  cardIdValidation,
-} = require('../middlewares/validation');
 
 const getCards = (req, res, next) => {
   Card.find({})
@@ -24,7 +20,8 @@ const createCard = (req, res, next) => {
     })
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        throw new BadRequestError('Переданы некорректные данные');
+        next(new BadRequestError('Переданы некорректные данные'));
+        return;
       }
       next(err);
     });
@@ -36,27 +33,26 @@ const deleteCard = (req, res, next) => {
   Card.findById(cardId)
     .then((card) => {
       if (!card) {
-        throw new NotFoundError('Карточка не найдена');
+        return next(new NotFoundError('Карточка не найдена'));
       }
 
       if (card.owner.toString() !== req.user._id) {
-        throw new ForbiddenError('Нет доступа для удаления чужой карточки');
+        return next(new ForbiddenError('Нет доступа для удаления чужой карточки'));
       }
 
-      return Card.findByIdAndRemove(cardId);
+      return card.deleteOne();
     })
     .then((deletedCard) => {
       if (!deletedCard) {
-        throw new NotFoundError('Карточка не найдена');
+        return next(new NotFoundError('Карточка не найдена'));
       }
       res.send(deletedCard);
     })
     .catch((err) => {
       if (err.name === 'CastError') {
-        next(new BadRequestError('Некорректный формат ID карточки'));
-      } else {
-        next(err);
+        return next(new BadRequestError('Некорректный формат ID карточки'));
       }
+      next(err);
     });
 };
 
@@ -70,13 +66,13 @@ const likeCard = (req, res, next) => {
   )
     .then((updatedCard) => {
       if (!updatedCard) {
-        throw new NotFoundError('Карточка не найдена');
+        return next(new NotFoundError('Карточка не найдена'));
       }
       res.send(updatedCard);
     })
     .catch((err) => {
       if (err.name === 'CastError') {
-        throw new BadRequestError('Некорректный формат ID карточки');
+        return next(new BadRequestError('Некорректный формат ID карточки'));
       }
       next(err);
     });
@@ -92,13 +88,13 @@ const dislikeCard = (req, res, next) => {
   )
     .then((updatedCard) => {
       if (!updatedCard) {
-        throw new NotFoundError('Карточка не найдена');
+        return next(new NotFoundError('Карточка не найдена'));
       }
       res.send(updatedCard);
     })
     .catch((err) => {
       if (err.name === 'CastError') {
-        throw new BadRequestError('Некорректный формат ID карточки');
+        return next(new BadRequestError('Некорректный формат ID карточки'));
       }
       next(err);
     });
@@ -106,8 +102,8 @@ const dislikeCard = (req, res, next) => {
 
 module.exports = {
   getCards,
-  createCard: [createCardValidation, createCard],
-  deleteCard: [cardIdValidation, deleteCard],
-  likeCard: [cardIdValidation, likeCard],
-  dislikeCard: [cardIdValidation, dislikeCard],
+  createCard,
+  deleteCard,
+  likeCard,
+  dislikeCard,
 };

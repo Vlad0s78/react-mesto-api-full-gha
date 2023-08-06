@@ -1,13 +1,12 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
+const { celebrate, Joi } = require('celebrate');
 const { errors } = require('celebrate');
 const cookieParser = require('cookie-parser');
 const userRoutes = require('./routes/users');
 const cardRoutes = require('./routes/cards');
 const NotFoundError = require('./errors/NotFoundError');
-const { loginValidation, createUserValidation } = require('./middlewares/validation');
 const errorMiddleware = require('./middlewares/errorMiddleware');
 const { login, createUser, logout } = require('./controllers/users');
 const { requestLogger, errorLogger } = require('./middlewares/logger');
@@ -31,16 +30,25 @@ app.get('/crash-test', () => {
   }, 0);
 });
 
-app.post('/signin', loginValidation, login);
-app.post('/signup', createUserValidation, createUser);
-
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
+const signInValidation = celebrate({
+  body: Joi.object().keys({
+    email: Joi.string().email().required(),
+    password: Joi.string().min(8).required(),
+  }),
 });
 
+const signUpValidation = celebrate({
+  body: Joi.object().keys({
+    email: Joi.string().email().required(),
+    password: Joi.string().min(8).required(),
+    name: Joi.string().min(2).max(30).required(),
+  }),
+});
+
+app.post('/signin', signInValidation, login);
+app.post('/signup', signUpValidation, createUser);
+
 app.use(helmet());
-app.use(limiter);
 app.delete('/logout', logout);
 
 app.use(auth);
