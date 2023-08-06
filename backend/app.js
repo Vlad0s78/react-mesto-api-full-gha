@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const { celebrate, Joi } = require('celebrate');
 const { errors } = require('celebrate');
 const cookieParser = require('cookie-parser');
+const { linkRegExp } = require('./utils/constants');
 const userRoutes = require('./routes/users');
 const cardRoutes = require('./routes/cards');
 const NotFoundError = require('./errors/NotFoundError');
@@ -30,23 +31,21 @@ app.get('/crash-test', () => {
   }, 0);
 });
 
-const signInValidation = celebrate({
+app.post('/signin', celebrate({
   body: Joi.object().keys({
-    email: Joi.string().email().required(),
-    password: Joi.string().min(8).required(),
+    email: Joi.string().required().email(),
+    password: Joi.string().required(),
   }),
-});
-
-const signUpValidation = celebrate({
+}), login);
+app.post('/signup', celebrate({
   body: Joi.object().keys({
-    email: Joi.string().email().required(),
-    password: Joi.string().min(8).required(),
-    name: Joi.string().min(2).max(30).required(),
+    name: Joi.string().optional().min(2).max(30),
+    about: Joi.string().optional().min(2).max(30),
+    avatar: Joi.string().optional().pattern(linkRegExp),
+    email: Joi.string().required().email(),
+    password: Joi.string().required(),
   }),
-});
-
-app.post('/signin', signInValidation, login);
-app.post('/signup', signUpValidation, createUser);
+}), createUser);
 
 app.use(helmet());
 app.delete('/logout', logout);

@@ -12,29 +12,23 @@ const authMiddleware = require('../middlewares/auth');
 
 const router = express.Router();
 
-const updateProfileValidation = celebrate({
-  body: Joi.object().keys({
-    name: Joi.string().min(2).max(30).required(),
-    about: Joi.string().min(2).max(30).required(),
-  }),
-});
-
-const updateAvatarValidation = celebrate({
-  body: Joi.object().keys({
-    avatar: Joi.string().regex(linkRegExp).required(),
-  }),
-});
-
-const userIdValidation = celebrate({
-  params: Joi.object().keys({
-    userId: Joi.string().hex().length(24).required(),
-  }),
-});
-
-router.get('/me', authMiddleware, getCurrentUser);
 router.get('/', authMiddleware, getUsers);
-router.get('/:userId', authMiddleware, userIdValidation, getUserById);
-router.patch('/me', authMiddleware, updateProfileValidation, updateProfileUser);
-router.patch('/me/avatar', authMiddleware, updateAvatarValidation, updateAvatarUser);
+router.get('/me', authMiddleware, getCurrentUser);
+router.get('/:userId', celebrate({
+  params: Joi.object().keys({
+    userId: Joi.string().required().length(24).hex(),
+  }),
+}), authMiddleware, getUserById);
+router.patch('/me', celebrate({
+  body: Joi.object().keys({
+    name: Joi.string().required().min(2).max(30),
+    about: Joi.string().required().min(2).max(30),
+  }),
+}), authMiddleware, updateProfileUser);
+router.patch('/me/avatar', celebrate({
+  body: Joi.object().keys({
+    avatar: Joi.string().required().pattern(linkRegExp),
+  }),
+}), authMiddleware, updateAvatarUser);
 
 module.exports = router;
