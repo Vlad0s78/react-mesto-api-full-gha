@@ -1,0 +1,10 @@
+.grid-elements__image {
+  width: 100%;
+  height: 282px;
+  margin: 0 auto;
+  padding: 0;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  object-fit: cover;
+  object-position: center;
+}

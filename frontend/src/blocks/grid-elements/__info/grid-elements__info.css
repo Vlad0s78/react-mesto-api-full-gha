@@ -1,0 +1,9 @@
+.grid-elements__info {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  margin: 0;
+  padding: 0 25px;
+  min-height: 79px;
+  align-items: center;
+}
